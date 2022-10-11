@@ -6,7 +6,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::glue:startJobRun.sync",
       "Parameters": {
-        "JobName": "etlandpipeline"
+        "JobName": "ETL_PIPELINE"
       },
       "Next": "Train model (XGBoost)"
     },

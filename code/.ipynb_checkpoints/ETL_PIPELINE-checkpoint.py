@@ -12,37 +12,32 @@ import io
 from io import StringIO
 import time
 
-
-
-
-bucket = 'your_bucket'
-GLUE_DATABASE = 'implementationdb'
-ATHENA_S3_OUTPUT_PATH = f's3://{bucket}/athena_results'
-
-#---FUNCTIONS-------------------------------
+account_id = boto3.client("sts").get_caller_identity()["Account"]
+bucket = "fashionstore-datalake-sm-" + str(account_id)
+GLUE_DATABASE = 'fashion_external'
+ATHENA_S3_OUTPUT_PATH = "fashionstore-datalake-output-athena-" + str(account_id)
 
 def write_dataframe_to_csv_on_s3(dataframe, bucket, filename):
     """ Write a dataframe to a CSV on S3 """
     # Create buffer
     csv_buffer = StringIO()
     # Write dataframe to buffer
-    dataframe.to_csv(csv_buffer, sep=",", header=None,index=None)
+    dataframe.to_csv(csv_buffer, sep = ",", header = None,index = None)
     # Create S3 object
     s3_resource = boto3.resource("s3")
     # Write buffer to S3 object
-    s3_resource.Object(bucket, filename).put(Body=csv_buffer.getvalue())
+    s3_resource.Object(bucket, filename).put(Body = csv_buffer.getvalue())
     print("Writing {} records to {}".format(len(dataframe), filename))
 
-    
 def athena_read(athena_query):
     # Start query execution using Athena client
     athena_client = boto3.client('athena')
     response = athena_client.start_query_execution(
-        QueryString=athena_query,
-        QueryExecutionContext={
+        QueryString = athena_query,
+        QueryExecutionContext = {
             'Database': GLUE_DATABASE
         },
-        ResultConfiguration={
+        ResultConfiguration = {
             'OutputLocation': ATHENA_S3_OUTPUT_PATH
         }
     )
@@ -58,7 +53,7 @@ def athena_read(athena_query):
     while query_execution_status == 'QUEUED' or query_execution_status == 'RUNNING' or query_execution_status is None:
         # Get Query Execution
         query_status = athena_client.get_query_execution(
-            QueryExecutionId=query_execution_id)
+            QueryExecutionId = query_execution_id)
         query_execution_status = query_status['QueryExecution']['Status']['State']
         print('Query Status: ' + query_execution_status)
         if query_execution_status == 'FAILED' or query_execution_status == 'CANCELLED':
@@ -93,14 +88,12 @@ def athena_read(athena_query):
 df_r = athena_read("select * from reseller" )
 df = athena_read("select * from billing" )
 
-
 print('dataframe',df.shape)
 print('dataframer',df_r.shape)
 
-
 df['date'] = pd.to_datetime(df['date'])
 max_date = df['date'].max()
-min_date = max_date - pd.to_timedelta(120, unit='d')
+min_date = max_date - pd.to_timedelta(120, unit = 'd')
 
 df = df[df['date'] > min_date]
 
@@ -147,33 +140,15 @@ df['weekday']  = df['date'].dt.day_name()
 
 
 # ### Compute next bill
-
-# In[11]:
-
-
 df['next_bill'] = df.replace(0,np.nan).groupby('id_reseller')['bill'].fillna(method='bfill')
 
-
 # ## Compute last bill
-
-# In[12]:
-
-
 df['last_bill'] = df.replace(0,np.nan).groupby('id_reseller')['bill'].fillna(method='ffill').copy()
 different_zero = df['last_bill'].shift(1)
 df.loc[df['bill'] != 0,'last_bill'] = np.nan
 df['last_bill'] = df['last_bill'].fillna(different_zero)
 
-
-# In[13]:
-
-
 df = df.merge(df_r,how='inner',on='id_reseller')
-
-
-# In[14]:
-
-
 df = df.dropna()
 
 
@@ -184,56 +159,34 @@ df = df.dropna()
 # This modules are python objects that keep in their internal variables the information necessary to transform new data.  So, in the Glue ETL we are going to store this objects in pkl format
 #
 
-# In[17]:
-
-
 le_cluster = LabelEncoder()
 ohe_cluster = OneHotEncoder(handle_unknown='ignore')
 df_cluster = pd.DataFrame(ohe_cluster.fit_transform(le_cluster.fit_transform(df['cluster'].fillna('')).reshape(-1, 1)).todense())
 df_cluster = df_cluster.add_prefix('cluster_')
-
-
-# In[18]:
-
 
 le_zone = LabelEncoder()
 ohe_zone = OneHotEncoder(handle_unknown='ignore')
 df_zone = pd.DataFrame(ohe_zone.fit_transform(le_zone.fit_transform(df['zone'].fillna('')).reshape(-1, 1)).todense())
 df_zone = df_zone.add_prefix('zone_')
 
-
-# In[19]:
-
-
 le_weekday = LabelEncoder()
 ohe_weekday = OneHotEncoder(handle_unknown='ignore')
 df_weekday = pd.DataFrame(ohe_weekday.fit_transform(le_weekday.fit_transform(df['weekday']).reshape(-1, 1)).todense())
 df_weekday = df_weekday.add_prefix('weekday_')
 
-
-# In[20]:
-
-
 client = boto3.client('s3')
-client.put_object(Body=pickle.dumps(le_cluster), Bucket=bucket, Key='preprocessing/le_cluster.pkl');
+client.put_object(Body=pickle.dumps(le_cluster), Bucket=bucket, Key = 'preprocessing/le_cluster.pkl');
 
-
-# In[21]:
-
-
-client.put_object(Body=pickle.dumps(ohe_cluster), Bucket=bucket, Key='preprocessing/ohe_cluster.pkl')
-client.put_object(Body=pickle.dumps(le_zone), Bucket=bucket, Key='preprocessing/le_zone.pkl')
-client.put_object(Body=pickle.dumps(ohe_zone), Bucket=bucket, Key='preprocessing/ohe_zone.pkl')
-client.put_object(Body=pickle.dumps(le_weekday), Bucket=bucket, Key='preprocessing/le_weekday.pkl')
-client.put_object(Body=pickle.dumps(ohe_weekday), Bucket=bucket, Key='preprocessing/ohe_weekday.pkl');
+client.put_object(Body=pickle.dumps(ohe_cluster), Bucket=bucket, Key = 'preprocessing/ohe_cluster.pkl')
+client.put_object(Body=pickle.dumps(le_zone), Bucket=bucket, Key = 'preprocessing/le_zone.pkl')
+client.put_object(Body=pickle.dumps(ohe_zone), Bucket=bucket, Key = 'preprocessing/ohe_zone.pkl')
+client.put_object(Body=pickle.dumps(le_weekday), Bucket=bucket, Key = 'preprocessing/le_weekday.pkl')
+client.put_object(Body=pickle.dumps(ohe_weekday), Bucket=bucket, Key = 'preprocessing/ohe_weekday.pkl');
 
 
 # ## Write to S3 resulting ETL
 #
 # Now we have to write to S3 all the relevant columns. We will perform a train/validation split of the customers so we can train on a group and get relevant metrics on the other.
-
-# In[29]:
-
 
 df = df[['next_bill', 'bill', 'date', 'id_reseller', 'mean-last-30', 'mean-last-7',
        'std-last-30', 'days_without_purchase', 'weekday',
@@ -251,7 +204,6 @@ df_validation = df[df['id_reseller'].isin(val_resellers)].sample(frac=1)
 
 df_train.drop(['date','id_reseller','bill','zone','cluster','weekday'],axis=1,inplace=True)
 df_validation.drop(['date','id_reseller','bill','zone','cluster','weekday'],axis=1,inplace=True)
-
 
 write_dataframe_to_csv_on_s3(df_validation, bucket, 'validation/validation.csv')
 write_dataframe_to_csv_on_s3(df_train, bucket, 'train/train.csv')
@@ -297,7 +249,6 @@ def complete_info(group):
            'std-last-30':std_last_30,'mean-last-7':mean_last_7,'last_bill':last_bill,
            'id_reseller':group['id_reseller'].max(), 'days_without_purchase':days_without_purchase}
 
-
 features = []
 for index,group in df.groupby('id_reseller'):
     features.append(complete_info(group))
@@ -337,6 +288,6 @@ df_to_predict_feats = df_to_predict[['mean-last-30', 'mean-last-7', 'std-last-30
        'weekday_0', 'weekday_1', 'weekday_2', 'weekday_3', 'weekday_4',
        'weekday_5', 'weekday_6']]
 
-write_dataframe_to_csv_on_s3(df_to_predict_feats,bucket,'to_predict.csv')
-write_dataframe_to_csv_on_s3(df_to_predict[['id_reseller']],bucket,'id_reseller_to_predict.csv')
+write_dataframe_to_csv_on_s3(df_to_predict_feats,bucket, 'to_predict.csv')
+write_dataframe_to_csv_on_s3(df_to_predict[['id_reseller']], bucket, 'id_reseller_to_predict.csv')
 
