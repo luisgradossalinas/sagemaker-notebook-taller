@@ -18,7 +18,7 @@
           "TrainingInputMode": "File"
         },
         "OutputDataConfig": {
-          "S3OutputPath": "s3://your_bucket/models"
+          "S3OutputPath": "s3://fashionstore-datalake-sm-account_id/models"
         },
         "StoppingCondition": {
           "MaxRuntimeInSeconds": 86400
@@ -35,7 +35,7 @@
               "S3DataSource": {
                 "S3DataDistributionType": "ShardedByS3Key",
                 "S3DataType": "S3Prefix",
-                "S3Uri": "s3://your_bucket/train/train.csv"
+                "S3Uri": "s3://fashionstore-datalake-sm-account_id/train/train.csv"
               }
             },
             "ChannelName": "train",
@@ -46,7 +46,7 @@
               "S3DataSource": {
                 "S3DataDistributionType": "ShardedByS3Key",
                 "S3DataType": "S3Prefix",
-                "S3Uri": "s3://your_bucket/validation/validation.csv"
+                "S3Uri": "s3://fashionstore-datalake-sm-account_id/validation/validation.csv"
               }
             },
             "ChannelName": "validation",
@@ -89,12 +89,12 @@
           "DataSource": {
             "S3DataSource": {
               "S3DataType": "S3Prefix",
-              "S3Uri": "s3://your_bucket/to_predict.csv"
+              "S3Uri": "s3://fashionstore-datalake-sm-account_id/to_predict.csv"
             }
           }
         },
         "TransformOutput": {
-          "S3OutputPath": "s3://your_bucket/predictions"
+          "S3OutputPath": "s3://fashionstore-datalake-sm-account_id/predictions"
         },
         "TransformResources": {
           "InstanceCount": 1,
