@@ -1,5 +1,5 @@
 {
-  "Comment": "Full ML Pipeline",
+  "Comment": "ML Pipeline",
   "StartAt": "Start Glue Job",
   "States": {
     "Start Glue Job": {
@@ -98,7 +98,7 @@
         },
         "TransformResources": {
           "InstanceCount": 1,
-          "InstanceType": "ml.m4.xlarge"
+          "InstanceType": "ml.t3.medium"
         },
         "TransformJobName.$": "$$.Execution.Name"
       },
