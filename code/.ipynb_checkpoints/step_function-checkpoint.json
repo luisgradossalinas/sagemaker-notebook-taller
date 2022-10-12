@@ -76,32 +76,6 @@
       },
       "Resource": "arn:aws:states:::sagemaker:createModel",
       "Type": "Task",
-      "Next": "Batch transform"
-    },
-    "Batch transform": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sagemaker:createTransformJob.sync",
-      "Parameters": {
-        "ModelName.$": "$$.Execution.Name",
-        "TransformInput": {
-          "CompressionType": "None",
-          "ContentType": "text/csv",
-          "DataSource": {
-            "S3DataSource": {
-              "S3DataType": "S3Prefix",
-              "S3Uri": "s3://fashionstore-datalake-sm-account_id/to_predict.csv"
-            }
-          }
-        },
-        "TransformOutput": {
-          "S3OutputPath": "s3://fashionstore-datalake-sm-account_id/predictions"
-        },
-        "TransformResources": {
-          "InstanceCount": 1,
-          "InstanceType": "ml.t3.medium"
-        },
-        "TransformJobName.$": "$$.Execution.Name"
-      },
       "End": true
     }
   }
